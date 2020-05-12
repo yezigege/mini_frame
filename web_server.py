@@ -65,16 +65,15 @@ class WSGIServer(object):
                 new_socket.send(html_content)
         else:
             # 2.2 如果是以 .py 结尾，那么就认为是动态资源的请求
-            header = "HTTP/1.1 200 OK\r\n"
-            header += "\r\n"
+            env = dict()
+            body = mini_frame.application(env, self.set_response_header)
 
-            # if file_name == "/login.py":
-            #     body = mini_frame.login()
-            # elif file_name == "/register.py":
-            #     body = mini_frame.register()
-            # else:
-            #     body = f"<body><h2>this is test file{time.ctime()}</h2></body>"
-            body = mini_frame.application(file_name)
+            header = f"HTTP/1.1 {self.status}\r\n"
+
+            for temp in self.headers:
+                header += f"{temp[0]}:{temp[1]}\r\n"
+
+            header += "\r\n"
 
             response = header + body
             # 发送 response 给浏览器
@@ -82,6 +81,11 @@ class WSGIServer(object):
 
         # 关闭套接字
         new_socket.close()
+
+    def set_response_header(self, status, headers):
+        self.status = status
+        self.headers = [("server", "mini_web v8.8")]
+        self.headers += headers
 
     def run_forever(self):
         """用来完成整体的控制"""
