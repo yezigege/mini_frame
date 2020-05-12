@@ -3,6 +3,8 @@ import time
 import socket
 import multiprocessing
 
+import mini_frame
+
 
 class WSGIServer(object):
     def __init__(self):
@@ -66,7 +68,12 @@ class WSGIServer(object):
             header = "HTTP/1.1 200 OK\r\n"
             header += "\r\n"
 
-            body = f"<body><h2>this is test file{time.ctime()}</h2></body>"
+            if file_name == "/login.py":
+                body = mini_frame.login()
+            elif file_name == "/register.py":
+                body = mini_frame.register()
+            else:
+                body = f"<body><h2>this is test file{time.ctime()}</h2></body>"
 
             response = header + body
             # 发送 response 给浏览器
