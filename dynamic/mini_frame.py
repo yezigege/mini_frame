@@ -160,9 +160,6 @@ def del_focus(ret):
     # 2. 判断试下是否有这个股票代码
     conn = connect(host='localhost', port=3306, user='root', password='mysql', database='stock_db', charset='utf8')
     cs = conn.cursor()
-    # 个人认为以下所有代码毫无作用，当我将下方代码取消时，发现当取消关注的时候，需要点击两次，才可以取消成功
-    # 问过老师，老师指出是 templates文件夹下面的center.html 的javascripte 代码里那 window.location.reload()
-    # 应该放在 currentAdd.click(function() 函数内部。 异步请求（暂时还不大明白）
     sql = """select * from info where code=%s;"""
     cs.execute(sql, (stock_code,))
     # 如果要是没有这个股票代码，那么就认为是非法的请求
@@ -189,6 +186,49 @@ def del_focus(ret):
     conn.close()
 
     return "取消关注成功...."
+
+
+@route(r"/update/(\d+)\.html")
+def show_update_page(ret):
+    """显示修改的那个页面"""
+    # 1. 获取股票代码
+    stock_code = ret.group(1)
+
+    # 2. 打开模板
+    with open("./templates/update.html") as f:
+        content = f.read()
+
+    # 3. 根据股票代码查询相关的备注信息
+    conn = connect(host='localhost', port=3306, user='root', password='mysql', database='stock_db', charset='utf8')
+    cs = conn.cursor()
+    sql = """select f.note_info from focus as f inner join info as i on i.id=f.info_id where i.code=%s;"""
+    cs.execute(sql, (stock_code,))
+    stock_infos = cs.fetchone()
+    note_info = stock_infos[0]  # 获取这个股票对应的备注信息
+    cs.close()
+    conn.close()
+
+    content = re.sub(r"\{%note_info%\}", note_info, content)
+    content = re.sub(r"\{%code%\}", stock_code, content)
+
+    return content
+
+
+@route(r"/update/(\d+)/(.*)\.html")
+def save_update_page(ret):
+    """"保存修改的信息"""
+    stock_code = ret.group(1)
+    comment = ret.group(2)
+
+    conn = connect(host='localhost', port=3306, user='root', password='mysql', database='stock_db', charset='utf8')
+    cs = conn.cursor()
+    sql = """update focus set note_info=%s where info_id = (select id from info where code=%s);"""
+    cs.execute(sql, (comment, stock_code))
+    conn.commit()
+    cs.close()
+    conn.close()
+
+    return "修改成功..."
 
 
 def application(env, start_response):
