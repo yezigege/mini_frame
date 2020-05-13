@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 from pymysql import connect
 
 """
@@ -219,6 +220,7 @@ def save_update_page(ret):
     """"保存修改的信息"""
     stock_code = ret.group(1)
     comment = ret.group(2)
+    comment = urllib.parse.unquote(comment)
 
     conn = connect(host='localhost', port=3306, user='root', password='mysql', database='stock_db', charset='utf8')
     cs = conn.cursor()
