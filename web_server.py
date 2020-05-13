@@ -124,7 +124,7 @@ def main():
         return
 
     # mini_frame:application
-    ret = re.match(r"([^:]+):(.*)", frame_app_name)
+    ret = re.match(r"([^:]+):(.*)", frame_app_name)  # ^: 表示 非冒号
     if ret:
         frame_name = ret.group(1)   # mini_frame
         app_name = ret.group(2)     # application
