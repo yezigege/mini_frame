@@ -1,12 +1,26 @@
+import re
+
+
 def index():
     with open("./templates/index.html") as f:
         content = f.read()
+
+    my_stock_info = "哈哈哈哈 这是你的本月名称....."
+
+    content = re.sub(r"\{%content%\}", my_stock_info, content)
+
     return content
 
 
 def center():
     with open("./templates/center.html") as f:
-        return f.read()
+        content = f.read()
+
+    my_stock_info = "这里是从mysql查询出来的数据。。。"
+
+    content = re.sub(r"\{%content%\}", my_stock_info, content)
+
+    return content
 
 
 def application(env, start_response):
