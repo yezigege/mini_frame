@@ -1,6 +1,26 @@
 import re
 
+# URL_FUNC_DICT = {
+#     "/index.py": index,
+#     "/center.py": center
+# }
+URL_FUNC_DICT = dict()
 
+
+def route(url):
+    def set_func(func):
+        """URL_FUNC_DICT["/index.py"] = index"""
+        URL_FUNC_DICT[url] = func
+
+        def call_func(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        return call_func
+
+    return set_func
+
+
+@route("/index.py")
 def index():
     with open("./templates/index.html") as f:
         content = f.read()
@@ -12,6 +32,7 @@ def index():
     return content
 
 
+@route("/center.py")
 def center():
     with open("./templates/center.html") as f:
         content = f.read()
@@ -21,12 +42,6 @@ def center():
     content = re.sub(r"\{%content%\}", my_stock_info, content)
 
     return content
-
-
-URL_FUNC_DICT = {
-    "/index.py": index,
-    "/center.py": center
-}
 
 
 def application(env, start_response):
@@ -42,6 +57,9 @@ def application(env, start_response):
     # else:
     #     return 'Hello World! 我爱你中国....'
 
-    func = URL_FUNC_DICT[file_name]
-    return func()
-
+    try:
+        # func = URL_FUNC_DICT[file_name]
+        # return func()
+        return URL_FUNC_DICT[file_name]()
+    except Exception as e:
+        return f"产生了异常: {str(e)}"
