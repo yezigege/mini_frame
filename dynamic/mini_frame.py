@@ -1,5 +1,6 @@
 import re
 import urllib.parse
+import logging
 from pymysql import connect
 
 """
@@ -248,6 +249,13 @@ def application(env, start_response):
         return 'Hello World! 我爱你中国....'
     """
 
+    logging.basicConfig(level=logging.INFO,
+                        filename='./log.txt',
+                        filemode='a',
+                        format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')
+
+    logging.info("访问的是，%s" % file_name)
+
     try:
         # func = URL_FUNC_DICT[file_name]
         # return func()
@@ -262,6 +270,7 @@ def application(env, start_response):
             if ret:
                 return func(ret)
         else:
+            logging.warning("没有对应的函数....")
             return "请求的url(%s)没有对应的函数...." % file_name
 
 
