@@ -1,4 +1,6 @@
 import re
+from pymysql import connect
+
 
 # URL_FUNC_DICT = {
 #     "/index.py": index,
@@ -25,9 +27,18 @@ def index():
     with open("./templates/index.html") as f:
         content = f.read()
 
-    my_stock_info = "哈哈哈哈 这是你的本月名称....."
+    # my_stock_info = "哈哈哈哈 这是你的本月名称....."
+    # content = re.sub(r"\{%content%\}", my_stock_info, content)
+    # 创建 connection 连接
+    conn = connect(host='localhost', port=3306, user='root', password='mysql', database='stock_db', charset='utf8')
+    # 获得 cursor 对象
+    cs = conn.cursor()
+    cs.execute("select * from info;")
+    stock_info = cs.fetchall()
+    cs.close()
+    conn.close()
 
-    content = re.sub(r"\{%content%\}", my_stock_info, content)
+    content = re.sub(r"\{%content%\}", str(stock_info), content)
 
     return content
 
