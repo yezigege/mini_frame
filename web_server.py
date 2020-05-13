@@ -1,23 +1,27 @@
+import logging
 import re
+import sys
 import time
 import socket
 import multiprocessing
 
-from dynamic import mini_frame
+# from dynamic import mini_frame
 
 
 class WSGIServer(object):
-    def __init__(self):
+    def __init__(self, port, app):
         # 1. 创建套接字
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #  设置当服务器先close 即服务器端4次挥手之后资源能够立即释放，这样就保证了，下次运行程序时 可以立即绑定指定端口，便于调试
         self.tcp_server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # 2. 绑定套接字
-        self.tcp_server_socket.bind(("", 7890))
+        self.tcp_server_socket.bind(("", port))
 
         # 3. 监听套接字
         self.tcp_server_socket.listen(128)
+
+        self.application = app
 
     def service_client(self, new_socket):
         """为客户端返回数据"""
@@ -67,7 +71,8 @@ class WSGIServer(object):
             # 2.2 如果是以 .py 结尾，那么就认为是动态资源的请求
             env = dict()  # 这个字典中存放的是 web 服务器要传递给 web 框架的数据信息
             env["PATH_INFO"] = file_name  # {"PATH_INFO": "/index.py"}
-            body = mini_frame.application(env, self.set_response_header)
+            # body = mini_frame.application(env, self.set_response_header)
+            body = self.application(env, self.set_response_header)
 
             header = f"HTTP/1.1 {self.status}\r\n"
 
@@ -105,7 +110,37 @@ class WSGIServer(object):
 
 def main():
     """控制整体，创建一个 web 服务器对象，然后调用这个对象的 run_forever 方法运行"""
-    wsgi_server = WSGIServer()
+    if len(sys.argv) == 3:
+        try:
+            port = int(sys.argv[1])       # 7890
+            frame_app_name = sys.argv[2]  # mini_frame:application
+        except Exception as e:
+            logging.error("端口输入错误......")
+            return
+    else:
+        logging.error("请按照以下方式运行: ")
+        logging.error("python3 xxx.py 7890 mini_frame:application")
+        return
+
+    # mini_frame:application
+    ret = re.match(r"([^:]+):(.*)", frame_app_name)
+    if ret:
+        frame_name = ret.group(1)   # mini_frame
+        app_name = ret.group(2)     # application
+    else:
+        logging.error("请按照以下方式运行: ")
+        logging.error("python3 xxx.py 7890 mini_frame:application")
+        return
+
+    sys.path.append("./dynamic")
+
+    # import frame_name  ==> 找 frame_name.py
+    frame = __import__(frame_name)     # 返回值标记 导入的这个模板
+    logging.warning(f"frame==========>{frame}")
+
+    app = getattr(frame, app_name)  # 此时 app 就指向了 dynamic/mini_frame 模块中的 application 函数
+
+    wsgi_server = WSGIServer(port, app)
     wsgi_server.run_forever()
 
 
