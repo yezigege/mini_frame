@@ -25,7 +25,7 @@ def route(url):
 
 
 @route(r"/index.html")
-def index():
+def index(ret):
     with open("./templates/index.html") as f:
         content = f.read()
 
@@ -68,7 +68,7 @@ def index():
 
 
 @route(r"/center.html")
-def center():
+def center(ret):
     with open("./templates/center.html") as f:
         content = f.read()
 
@@ -116,9 +116,39 @@ def center():
 # 给路由添加正则表达式的原因：在实际开发时，url中往往会带有很多参数，例如/add/000007.html中000007就是参数，
 # 如果没有正则的话，那么就需要编写N次@route来进行添加 url对应的函数 到字典中，此时字典中的键值对有N个，浪费空间
 # 而采用了正则的话，那么只要编写1次@route就可以完成多个 url例如/add/00007.html /add/000036.html等对应同一个函数，此时字典中的键值对个数会少很多
-@route(r"/add/\d+\.html")
-def add_focus():
-    return "add  ok ...."
+@route(r"/add/(\d+)\.html")
+def add_focus(ret):
+    # 1. 获取股票代码
+    stock_code = ret.group(1)
+
+    # 2. 判断试下是否有这个股票代码
+    conn = connect(host='localhost', port=3306, user='root', password='mysql', database='stock_db', charset='utf8')
+    cs = conn.cursor()
+    sql = """select * from info where code=%s;"""
+    cs.execute(sql, (stock_code,))
+    # 如果要是没有这个股票代码，那么就认为是非法的请求
+    if not cs.fetchone():
+        cs.close()
+        conn.close()
+        return "没有这支股票，大哥 ，我们是创业公司，请手下留情..."
+
+    # 3. 判断以下是否已经关注过
+    sql = """ select * from info as i inner join focus as f on i.id=f.info_id where i.code=%s;"""
+    cs.execute(sql, (stock_code,))
+    # 如果查出来了，那么表示已经关注过
+    if cs.fetchone():
+        cs.close()
+        conn.close()
+        return "已经关注过了，请勿重复关注..."
+
+    # 4. 添加关注
+    sql = """insert into focus (info_id) select id from info where code=%s;"""
+    cs.execute(sql, (stock_code,))
+    conn.commit()
+    cs.close()
+    conn.close()
+
+    return "关注成功...."
 
 
 def application(env, start_response):
@@ -148,7 +178,7 @@ def application(env, start_response):
             # }
             ret = re.match(url, file_name)
             if ret:
-                return func()
+                return func(ret)
         else:
             return "请求的url(%s)没有对应的函数...." % file_name
 
