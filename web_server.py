@@ -9,7 +9,7 @@ import multiprocessing
 
 
 class WSGIServer(object):
-    def __init__(self, port, app):
+    def __init__(self, port, app, static_path):
         # 1. 创建套接字
         self.tcp_server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         #  设置当服务器先close 即服务器端4次挥手之后资源能够立即释放，这样就保证了，下次运行程序时 可以立即绑定指定端口，便于调试
@@ -22,6 +22,7 @@ class WSGIServer(object):
         self.tcp_server_socket.listen(128)
 
         self.application = app
+        self.static_path = static_path
 
     def service_client(self, new_socket):
         """为客户端返回数据"""
@@ -48,7 +49,7 @@ class WSGIServer(object):
         # 2.1 如果请求的资源不是以 .py 结尾，那么就认为是静态资源(html/css/js/png, jpg等)
         if not file_name.endswith(".py"):
             try:
-                f = open("./html" + file_name, "rb")
+                f = open(self.static_path + file_name, "rb")
             except:
                 response = "HTTP/1.1 404 NOT FOUND\r\n"
                 response += "\r\n"
@@ -132,7 +133,16 @@ def main():
         logging.error("python3 xxx.py 7890 mini_frame:application")
         return
 
-    sys.path.append("./dynamic")
+    with open("./web_server.conf") as f:
+        conf_info = eval(f.read())   # eval 可以使字符串转换为数据
+
+    # 此时 conf_info 是一个字典，里面的数据为：
+    # {
+    #     "static_path": "./static",
+    #     "dynamic_path": "./dynamic"
+    # }
+
+    sys.path.append(conf_info["dynamic_path"])
 
     # import frame_name  ==> 找 frame_name.py
     frame = __import__(frame_name)     # 返回值标记 导入的这个模板
@@ -140,7 +150,7 @@ def main():
 
     app = getattr(frame, app_name)  # 此时 app 就指向了 dynamic/mini_frame 模块中的 application 函数
 
-    wsgi_server = WSGIServer(port, app)
+    wsgi_server = WSGIServer(port, app, conf_info["static_path"])
     wsgi_server.run_forever()
 
 
